@@ -124,7 +124,7 @@ def make_maze(grid):
 			current.current = True
 			current.backtracked = True
 		yield current
-	while len(stack) > 0:
+	while len(stack) > 0 and Cell.SHOW_BACKTRACK:
 		current.current = False
 		current.backtracked = True
 		current = stack.pop(-1)
