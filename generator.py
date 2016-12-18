@@ -1,7 +1,18 @@
 import pygame
 import random
 
+def draw_rect_with_alpha(display, rgba, pos, size):
+	rect = pygame.Surface(size, flags = int("0x00010000", 16))
+	rect.fill(rgba)
+	display.blit(rect, pos)
+
 class Cell:
+
+	CURRENT_COLOR = None
+	VISITED_COLOR = None
+	BACKGROUND_COLOR = None
+	BACKTRACKED_COLOR = None
+	SHOW_BACKTRACK = None
 
 	def __init__(self, row, col):
 		self.row = row
@@ -9,25 +20,29 @@ class Cell:
 		self.visited = False
 		self.walls = [True for e in range(4)]
 		self.current = False
+		self.backtracked = False
 		self.last_draw = {
 			"walls": [],
 			"visited": None,
-			"current": None
+			"current": None,
+			"backtracked": None
 		}
 
-	def draw(self, display, color, background_color, size):
+	def draw(self, display, color, size):
 		to_compare = {
 			"walls": self.walls,
 			"current": self.current,
-			"visited": self.visited
+			"visited": self.visited,
+			"backtracked": self.backtracked
 		}
 
 		if to_compare != self.last_draw:
-			pygame.draw.rect(display, background_color, pygame.Rect(Vector((self.col, self.row)) * size, (size, size)))
+			pygame.draw.rect(display, self.BACKGROUND_COLOR, pygame.Rect(Vector((self.col, self.row)) * size, (size, size)))
 			self.__draw(display, color, size)
 			self.last_draw["walls"] = self.walls[:]
 			self.last_draw["current"] = self.current
 			self.last_draw["visited"] = self.visited
+			self.last_draw["backtracked"] = self.backtracked
 
 
 	def __draw(self, display, color, size):
@@ -41,14 +56,13 @@ class Cell:
 			pygame.draw.line(display, color, (self.col * size       , self.row * size + size), (self.col * size       , self.row * size))
 
 		if self.current:
-			rect = pygame.Surface((size, size), flags = int("0x00010000", 16))
-			rect.fill((0, 255, 0))
-			display.blit(rect, (self.col * size, self.row * size))
+			draw_rect_with_alpha(display, self.CURRENT_COLOR, Vector((self.col, self.row)) * size, (size, size))
+
+		elif self.backtracked and self.SHOW_BACKTRACK:
+			draw_rect_with_alpha(display, self.BACKTRACKED_COLOR, Vector((self.col, self.row)) * size, (size, size))
 
 		elif self.visited:
-			rect = pygame.Surface((size, size), flags = int("0x00010000", 16))
-			rect.fill((255, 0, 255, 50))
-			display.blit(rect, (self.col * size, self.row * size))
+			draw_rect_with_alpha(display, self.VISITED_COLOR, Vector((self.col, self.row)) * size, (size, size))
 
 		
 
@@ -105,7 +119,16 @@ def make_maze(grid):
 			visited.append(current)
 		elif len(stack) > 0:
 			current.current = False
+			current.backtracked = True
 			current = stack.pop(-1)
 			current.current = True
+			current.backtracked = True
+		yield current
+	while len(stack) > 0:
+		current.current = False
+		current.backtrackted = True
+		current = stack.pop(-1)
+		current.current = True
+		current.backtrackted = True
 		yield current
 	current.current = False
