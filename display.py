@@ -31,7 +31,7 @@ def setup():
 
 	parser = argparse.ArgumentParser(description="Randomly creates a maze with a given size")
 	parser.add_argument("-s", "--size", default = (800, 600),  help = "Specifyes the window size. Defalut is 800x600.", nargs = 2, type = int, metavar = ("width", "height"))
-	parser.add_argument("-S", "--square", default = 10, help = "Specifyes the squares' size. Default is 10.", type = int, metavar = "size")
+	parser.add_argument("-S", "--square", default = 20, help = "Specifyes the squares' size. Default is 20.", type = int, metavar = "size")
 	parser.add_argument("-f", "--framerate", default = 60, help = "Specifyes the framerate. Default is 60 fps.", type = int, metavar ="fps")
 	parser.add_argument("-b", "--background", default = (32, 32, 32), help = "Specifyes the background color. Colors are given in RGB format. Defalut is (32, 32, 32)",
 						nargs = 3, type = int, metavar = ("r", "g", "b"))
