@@ -37,6 +37,8 @@ class Cell:
 	VISITED_COLOR = (0,0,0)
 	BACKGROUND_COLOR = (0,0,0)
 	BACKTRACKED_COLOR = (0,0,0)
+	START_COLOR = (0,0,0)
+	END_COLOR = (0,0,0)
 	SHOW_BACKTRACK = False
 
 	def __init__(self, row, col):
@@ -49,12 +51,22 @@ class Cell:
 		self.walls = [True for e in range(4)]
 		self.current = False
 		self.backtracked = False
+		self.start = False
+		self.end = False
 		self.last_draw = {
 			"walls": [],
 			"visited": None,
 			"current": None,
-			"backtracked": None
+			"backtracked": None,
+			"start": False,
+			"end": False
 		}
+
+	def __repr__(self):
+		return str(self.__dict__)
+
+	def __str__(self):
+		return self.__repr__()
 
 	def draw(self, display, color, size):
 		"""
@@ -75,7 +87,9 @@ class Cell:
 			"walls": self.walls,
 			"current": self.current,
 			"visited": self.visited,
-			"backtracked": self.backtracked
+			"backtracked": self.backtracked,
+			"start": self.start,
+			"end": self.end
 		}
 
 		if to_compare != self.last_draw:
@@ -85,6 +99,8 @@ class Cell:
 			self.last_draw["current"] = self.current
 			self.last_draw["visited"] = self.visited
 			self.last_draw["backtracked"] = self.backtracked
+			self.last_draw["start"] = self.start
+			self.last_draw["end"] = self.end
 
 
 	def __draw(self, display, color, size):
@@ -114,6 +130,12 @@ class Cell:
 		if self.current:
 			draw_rect_with_alpha(display, self.CURRENT_COLOR, Vector((self.col, self.row)) * size, (size, size))
 
+		elif self.start:
+			draw_rect_with_alpha(display, self.START_COLOR, Vector((self.col, self.row)) * size, (size, size))
+
+		elif self.end:
+			draw_rect_with_alpha(display, self.END_COLOR, Vector((self.col, self.row)) * size, (size, size))
+
 		elif self.backtracked and self.SHOW_BACKTRACK:
 			draw_rect_with_alpha(display, self.BACKTRACKED_COLOR, Vector((self.col, self.row)) * size, (size, size))
 
@@ -130,7 +152,7 @@ class Cell:
 		grid		-	The grid to yield the neighbours
 
 		Types:
-		grid		-	[[Cell]]
+		grid		-	Grid
 
 
 		Yields		-	The neigbours of the cell in the given grid.
@@ -138,8 +160,8 @@ class Cell:
 		"""
 		for diff in ((-1, 0), (1, 0), (0, -1), (0, 1)):
 			res = Vector((self.row, self.col)) + diff
-			if res[0] >= 0 and res[1] >= 0 and res[0] < len(grid) and res[1] < len(grid[0]):
-				yield grid[res[0]][res[1]]
+			if res[0] >= 0 and res[1] >= 0 and res[0] < grid.rows and res[1] < grid.cols:
+				yield grid[res[0], res[1]]
 
 	def get_unvisited_neighbours(self, grid):
 		"""
@@ -149,7 +171,7 @@ class Cell:
 		grid 		-	The grid to yield the neighbours.
 
 		Types:
-		grid		-	[[Cell]]
+		grid		-	Grid
 
 		Yields		-	The unvisited neighbours of the cell in the given grid.
 		Yield type 	-	Cell
@@ -194,6 +216,34 @@ class Vector(tuple):
 	def __sub__(self, other):
 		return Vector([a - b for a, b in zip(self, other)])
 
+class Grid:
+
+	def __init__(self, rows, cols):
+		self.grid = [[Cell(row, col) for col in range(cols)] for row in range(rows)]
+		self.rows = rows
+		self.cols = cols
+		self.current = None
+
+	def __getitem__(self, pos):
+		return self.grid[pos[0]][pos[1]]
+
+	def __iter__(self):
+		for row in self.grid:
+			for cell in row:
+				yield cell
+
+	def __len__(self):
+		return self.rows * self.cols
+
+	def reset(self, new_size = None):
+		if new_size is not None:
+			self.__init__(new_size[0], new_size[1])
+		else:
+			self.__init__(self.rows, self.cols)
+
+
+
+
 
 def make_maze(grid):
 	"""
@@ -207,7 +257,7 @@ def make_maze(grid):
 	grid 		-	The grid to make the maze on.
 
 	Types:
-	grid		-	[[Cell]]
+	grid		-	Grid
 
 
 	Yields		-	The current position of the algorithm, i.e. the position
@@ -215,13 +265,13 @@ def make_maze(grid):
 					algorithm
 	Yield type 	-	Cell
 	"""
-	current = grid[0][0]
+	current = grid[0, 0]
 	current.visited = True
 	current.current = True
 	visited = [current]
 	stack = []
 	yield current
-	while len(visited) < len(grid) * len(grid[0]):
+	while len(visited) < len(grid):
 		current_neighbours = [neighbour for neighbour in current.get_unvisited_neighbours(grid)]
 		if len(current_neighbours) > 0:
 			next_cell = random.choice(current_neighbours)

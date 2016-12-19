@@ -7,6 +7,8 @@ This moduel uses pygame to create the graphical display.
 import pygame
 import generator
 import argparse
+import functools
+import sys
 
 RED = (255, 0, 0)
 GREEN = (0,255,0)
@@ -27,6 +29,8 @@ LINE_COLOR = None
 CURRENT_COLOR = None
 VISITED_COLOR = None
 BACKTRACKED_COLOR = None
+FROM_COLOR = None
+TO_COLOR = None
 
 SHOW_BACKTRACK = None
 SHOW_LOAD = None
@@ -35,7 +39,8 @@ def setup():
 	"""
 	Sets all global constants to their apropriate values, either a default value or one specified from the command line
 	"""
-	global WINDOW_SIZE, SQUARE_SIZE, FRAMERATE, BACKGROUND_COLOR, LINE_COLOR, UPDATES, CURRENT_COLOR, VISITED_COLOR, BACKTRACKED_COLOR, SHOW_BACKTRACK, SHOW_LOAD
+	global WINDOW_SIZE, SQUARE_SIZE, FRAMERATE, BACKGROUND_COLOR, LINE_COLOR, UPDATES, CURRENT_COLOR, VISITED_COLOR
+	global BACKTRACKED_COLOR, SHOW_BACKTRACK, SHOW_LOAD, FROM_COLOR, TO_COLOR
 
 	parser = argparse.ArgumentParser(description="Randomly creates a maze and displays the proces and the result in a new window")
 	parser.add_argument("-nl", "--no-load", action = "store_true", help = "Skips the loadingprocec of the maze generation")
@@ -55,6 +60,10 @@ def setup():
 						nargs = 4, type = int, metavar = ("r", "g", "b", "a"))
 	parser.add_argument("-B", "--backtrack-color", default = (0, 128, 255, 50), help = "Specifies the color of backtracked positions. The color is given in RGBA form. Default is (0, 128, 255, 50)",
 						nargs = 4, type = int, metavar = ("r", "g", "b", "a"))
+	parser.add_argument("-F" , "--from-color", default = (255, 0, 0, 50), help = "Specifies the color of from positions. The color is given in RGBA form. Default is (255, 0, 0, 50)",
+						nargs = 4, type = int, metavar = ("r", "g", "b", "a"))
+	parser.add_argument("-t" , "--to-color", default = (0, 255, 0, 255), help = "Specifies the color of from positions. The color is given in RGBA form. Default is (0, 0, 255, 255)",
+						nargs = 4, type = int, metavar = ("r", "g", "b", "a"))
 
 	
 
@@ -71,6 +80,8 @@ def setup():
 	BACKTRACKED_COLOR = tuple(args.backtrack_color)
 	SHOW_BACKTRACK = not args.no_backtrack
 	SHOW_LOAD = not args.no_load
+	FROM_COLOR = tuple(args.from_color)
+	TO_COLOR = tuple(args.to_color)
 
 def clear_screen(display):
 	"""
@@ -96,29 +107,22 @@ def run_generator(display, clock, grid):
 	Types:
 	display 	-	pygame.Surface
 	clock 		- 	pygame.time.Clock
-	grid 		- 	[[generation.Cell]]
+	grid 		- 	generation.Grid
 	"""
 	frame = 0
 	for current in generator.make_maze(grid):
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
-				return
+				return False
 		frame += 1
 		frame %= UPDATES
 		if frame == 0 and SHOW_LOAD:
-			for row in grid:
-				for cell in row:
-					cell.draw(display, LINE_COLOR, SQUARE_SIZE)
-
-			pygame.display.update()
+			draw_grid(display, grid)
 		if SHOW_LOAD:
 			clock.tick(FRAMERATE)
 
-	for row in grid:
-		for cell in row:
-			cell.draw(display, LINE_COLOR, SQUARE_SIZE)
-
-	pygame.display.update()
+	pick_positions(grid)
+	return True
 
 def init_vars():
 	"""
@@ -129,7 +133,71 @@ def init_vars():
 	generator.Cell.CURRENT_COLOR = CURRENT_COLOR
 	generator.Cell.BACKTRACKED_COLOR = BACKTRACKED_COLOR
 	generator.Cell.SHOW_BACKTRACK = SHOW_BACKTRACK
-	
+	generator.Cell.END_COLOR = TO_COLOR
+	generator.Cell.START_COLOR = FROM_COLOR
+
+def keypress_handler(display, clock, event, grid):
+	keybindings = {
+		pygame.K_c     : grid.reset,
+		pygame.K_SPACE : lambda : run_generator(display, clock, grid) if not grid[0,0].visited else None,
+		pygame.K_UP    : functools.partial(arrow_key, grid, (-1, 0)),
+		pygame.K_DOWN  : functools.partial(arrow_key, grid, (1, 0)),
+		pygame.K_LEFT  : functools.partial(arrow_key, grid, (0, -1)),
+		pygame.K_RIGHT : functools.partial(arrow_key, grid, (0, 1))
+	}
+	if event.key in keybindings:
+		res = keybindings[event.key]()
+		print()
+		sys.stdout.flush()
+		return res
+	else:
+		return None
+
+def draw_grid(display, grid):
+	for cell in grid:
+		cell.draw(display, LINE_COLOR, SQUARE_SIZE)
+	pygame.display.update()
+
+def pick_positions(grid):
+	grid[0,0].start = True
+	grid[grid.rows - 1, grid.cols - 1].end = True
+
+def move(grid, direction, current):
+	wall_map = {
+		(1 ,  0): 3,
+		(-1,  0): 0,
+		(0 , -1): 2,
+		(0 ,  1): 1
+	}
+	new_pos = generator.Vector(direction) + (current.row, current.col)
+	print("NEW POS:", new_pos)
+	if new_pos[0] >= 0 and new_pos[1] >= 0 and new_pos[0] < grid.rows and new_pos[1] < grid.cols:
+		to_move_to = grid[new_pos]
+		print("WALLS", current.walls)
+		if not current.walls[wall_map[direction]]:
+			to_move_to.current = True
+			current.current = False
+			print(to_move_to.row, to_move_to.col)
+			return to_move_to
+		else:
+			return current
+	else:
+		print(current)
+		return current
+
+def arrow_key(grid, direction):
+	if grid.current is None:
+		grid.current = find_start(grid)
+		grid.current.current = True
+	print("INSIDE", grid.current)
+	grid.current = move(grid, direction, grid.current)
+	print("MOVE", (grid.current.row, grid.current.col) if grid.current is not None else None, direction)
+
+def find_start(grid):
+	for cell in grid:
+		if cell.start:
+			print("found cell:", (cell.row, cell.col))
+			return cell
 
 def main():
 	"""
@@ -141,29 +209,22 @@ def main():
 	pygame.display.set_caption("Maze Generator")
 	clock = pygame.time.Clock()
 	running = True
-	first_time = True
 	background = pygame.Surface(WINDOW_SIZE)
 	background.fill(BACKGROUND_COLOR)
 	game_display.blit(background, (0,0))
+	grid = generator.Grid(WINDOW_SIZE[1] // SQUARE_SIZE, WINDOW_SIZE[0] // SQUARE_SIZE)
 
 	while running:
-		grid = [[generator.Cell(row, col) for col in range(WINDOW_SIZE[0] // SQUARE_SIZE)] for row in range(WINDOW_SIZE[1] // SQUARE_SIZE)]
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
 				return
 			if event.type == pygame.KEYDOWN:
-				run_generator(game_display, clock, grid)
-				first_time = False
+				res = keypress_handler(game_display, clock, event, grid)
+				if res == False:
+					return
 
-		if first_time:
-			for row in grid:
-				for cell in row:
-					cell.draw(game_display, LINE_COLOR, SQUARE_SIZE)
-			pygame.display.update()
-			clock.tick(FRAMERATE)
-			clear_screen(game_display)
-		else:
-			clock.tick(FRAMERATE)
+		draw_grid(game_display, grid)
+		clock.tick(FRAMERATE)
 
 if __name__ == '__main__':
 	setup()
