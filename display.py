@@ -8,6 +8,7 @@ import pygame
 import generator
 import argparse
 import functools
+import random
 
 RED = (255, 0, 0)
 GREEN = (0,255,0)
@@ -194,25 +195,33 @@ def move(grid, direction, current):
 		to_move_to = grid[new_pos]
 		if not current.walls[wall_map[direction]]:
 			to_move_to.current = True
-			current.current = False
-			if to_move_to == grid.end:
-				pygame.event.post(pygame.event.Event(STOP_CLOCK, finnished=True))
-				to_move_to.current = False
-				return None
-			return to_move_to
 		else:
 			pygame.event.post(pygame.event.Event(HIT_WALL))
-			return current
+			new_pos = (random.randint(0, grid.rows - 1), random.randint(0, grid.cols - 1))
+			while new_pos == (grid.rows - 1, grid.cols - 1):
+				new_pos = (random.randint(0, grid.rows - 1), random.randint(0, grid.cols - 1))
+			to_move_to = grid[new_pos]
+			current.current = False
+			to_move_to.current = True
+
+		if to_move_to == grid.end:
+			pygame.event.post(pygame.event.Event(STOP_CLOCK, finnished=True))
+			to_move_to.current = False
+			return None
+
+		current.current = False
+		return to_move_to
 	else:
 		pygame.event.post(pygame.event.Event(HIT_WALL))
 		return current
 
 def arrow_key(grid, direction):
-	if grid.current is None:
-		grid.current = grid.start
-		grid.current.current = True
-		pygame.event.post(pygame.event.Event(START_CLOCK))
-	grid.current = move(grid, direction, grid.current)
+	if grid.start is not None:
+		if grid.current is None:
+			grid.current = grid.start
+			grid.current.current = True
+			pygame.event.post(pygame.event.Event(START_CLOCK))
+		grid.current = move(grid, direction, grid.current)
 
 def display_text(display, text, color, size, pos, grid):
 	font = pygame.font.SysFont("monospace", size)
@@ -238,13 +247,11 @@ def display_text(display, text, color, size, pos, grid):
 def force_update_surface(display, surface, pos, grid):
 	to_pos = generator.Vector(surface.get_size()) + pos
 	from_index =(pos[1] // SQUARE_SIZE, pos[0] // SQUARE_SIZE)   # row col
-	to_index = (to_pos[1] // SQUARE_SIZE, to_pos[0] // SQUARE_SIZE)
-	#print(from_index, to_index)
+	to_index = (to_pos[1] // SQUARE_SIZE + (1 if to_pos[1] % SQUARE_SIZE != 0 else 0), to_pos[0] // SQUARE_SIZE + (1 if to_pos[0] % SQUARE_SIZE != 0 else 0))
 
 	if from_index[0] != to_index[0] and from_index[1] != to_index[1]:
 		for row in range(from_index[0], to_index[0]):
 			for col in range(from_index[1], to_index[1]):
-				#print(row, col)
 				grid[row,col].draw(display, LINE_COLOR, SQUARE_SIZE, force_draw = True)
 	elif from_index[0] != to_index[0]:
 		for row in range(from_index[0], to_index[0]):
@@ -261,12 +268,12 @@ def format_time(time):
 
 	return minutes, seconds, hundrets
 
-def display_timer(display, start_time, grid):
+def display_timer(display, start_time, grid, font_size):
 	time_passed = pygame.time.get_ticks() - start_time
-	display_text(display, "%d:%02d.%02d" %(format_time(time_passed)), RED, 30, "north east", grid)
+	display_text(display, "%d:%02d.%02d" %(format_time(time_passed)), RED, font_size, "north east", grid)
 
-def display_time(display, time, grid):
-	display_text(display, "%d:%02d.%02d" %(format_time(time)), RED, 30, "north east", grid)
+def display_time(display, time, grid, font_size):
+	display_text(display, "%d:%02d.%02d" %(format_time(time)), RED, font_size, "north east", grid)
 
 
 def main():
@@ -291,6 +298,7 @@ def main():
 	final_time = -1
 	time_flash = 60
 	hit_flash = 0
+	hits = 0
 	while running:
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
@@ -302,6 +310,7 @@ def main():
 			if event.type == START_CLOCK:
 				start_time = pygame.time.get_ticks()
 				final_time = -1
+				hits = 0
 			if event.type == STOP_CLOCK:
 				if event.finnished:
 					final_time = pygame.time.get_ticks() - start_time
@@ -311,8 +320,10 @@ def main():
 			if event.type == HIT_WALL:
 				hit_sound.play().play(hit_sound)
 				hit_flash = 10
+				hits += 1
 
 		draw_grid(game_display, grid)
+		display_text(game_display, "HITS: %d" %(hits), RED, 40, "north", grid)
 
 		if hit_flash % 2 and hit_flash > -1:
 			generator.draw_rect_with_alpha(game_display, (255, 0, 0, 100), (0,0), WINDOW_SIZE)
@@ -321,18 +332,18 @@ def main():
 			force_update_surface(game_display, pygame.Surface(WINDOW_SIZE), (0,0), grid)
 
 		if start_time != -1:
-			display_timer(game_display, start_time, grid)
+			display_timer(game_display, start_time, grid, 40)
 		elif final_time != -1:
 			if time_flash > FRAMERATE / 2:
-				display_time(game_display, final_time, grid)
+				display_time(game_display, final_time, grid, 40)
 			if time_flash < FRAMERATE / 2:
-				label, pos = display_text(game_display, "%d:%02d.%02d" %(format_time(final_time)), RED, 30, "north east", grid)
+				label, pos = display_text(game_display, "%d:%02d.%02d" %(format_time(final_time)), RED, 40, "north east", grid)
 				force_update_surface(game_display, label, pos, grid)
 			time_flash = max(time_flash - 1, 0)
 			if time_flash == 0:
 				time_flash = FRAMERATE
 
-		hit_flash = max(hit_flash - 1, 0)
+		hit_flash = max(hit_flash - 1, -1)
 		clock.tick(FRAMERATE)
 
 if __name__ == '__main__':
