@@ -233,6 +233,7 @@ class Grid:
 		self.current = None
 		self.start = None
 		self.end = None
+		self.visited = set()
 
 	def __getitem__(self, pos):
 		return self.grid[pos[0]][pos[1]]

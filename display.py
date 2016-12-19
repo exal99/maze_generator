@@ -197,24 +197,28 @@ def move(grid, direction, current):
 			to_move_to.current = True
 		else:
 			pygame.event.post(pygame.event.Event(HIT_WALL))
-			new_pos = (random.randint(0, grid.rows - 1), random.randint(0, grid.cols - 1))
-			while new_pos == (grid.rows - 1, grid.cols - 1):
-				new_pos = (random.randint(0, grid.rows - 1), random.randint(0, grid.cols - 1))
-			to_move_to = grid[new_pos]
-			current.current = False
-			to_move_to.current = True
+			if len(grid.visited) > 0:
+				to_move_to = random.choice(list(grid.visited))
+			else:
+				to_move_to = current
 
 		if to_move_to == grid.end:
 			pygame.event.post(pygame.event.Event(STOP_CLOCK, finnished=True))
 			to_move_to.current = False
 			current.current = False
 			return None
-
-		current.current = False
-		return to_move_to
+		
 	else:
 		pygame.event.post(pygame.event.Event(HIT_WALL))
-		return current
+		if len(grid.visited) > 0:
+			to_move_to = random.choice(list(grid.visited))
+		else:
+			to_move_to = current
+
+	to_move_to.current = True
+	current.current = False
+	grid.visited.add(to_move_to)
+	return to_move_to
 
 def arrow_key(grid, direction):
 	if grid.start is not None:
@@ -287,6 +291,8 @@ def main():
 	init_vars()
 
 	hit_sound = pygame.mixer.Sound("hit.wav")
+	ding_sound = pygame.mixer.Sound("ding.wav")
+
 	game_display = pygame.display.set_mode(WINDOW_SIZE)
 	pygame.display.set_caption("Maze Generator")
 	clock = pygame.time.Clock()
@@ -315,8 +321,10 @@ def main():
 			if event.type == STOP_CLOCK:
 				if event.finnished:
 					final_time = pygame.time.get_ticks() - start_time
+					ding_sound.play()
 				else:
 					final_time = -1
+					hits = 0
 				start_time = -1
 			if event.type == HIT_WALL:
 				hit_sound.play().play(hit_sound)
