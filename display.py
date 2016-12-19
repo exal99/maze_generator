@@ -29,14 +29,16 @@ VISITED_COLOR = None
 BACKTRACKED_COLOR = None
 
 SHOW_BACKTRACK = None
+SHOW_LOAD = None
 
 def setup():
 	"""
 	Sets all global constants to their apropriate values, either a default value or one specified from the command line
 	"""
-	global WINDOW_SIZE, SQUARE_SIZE, FRAMERATE, BACKGROUND_COLOR, LINE_COLOR, UPDATES, CURRENT_COLOR, VISITED_COLOR, BACKTRACKED_COLOR, SHOW_BACKTRACK
+	global WINDOW_SIZE, SQUARE_SIZE, FRAMERATE, BACKGROUND_COLOR, LINE_COLOR, UPDATES, CURRENT_COLOR, VISITED_COLOR, BACKTRACKED_COLOR, SHOW_BACKTRACK, SHOW_LOAD
 
 	parser = argparse.ArgumentParser(description="Randomly creates a maze and displays the proces and the result in a new window")
+	parser.add_argument("-nl", "--no-load", action = "store_true", help = "Skips the loadingprocec of the maze generation")
 	parser.add_argument("-nb", "--no-backtrack", action = "store_true", help = "Does not mark backtrackted positions with a different color")
 	parser.add_argument("-s", "--size", default = (800, 600),  help = "Specifies the window size. Defalut is 800x600.", nargs = 2, type = int, metavar = ("width", "height"))
 	parser.add_argument("-S", "--square-size", default = 20, help = "Specifies the squares' size. Default is 20.", type = int, metavar = "size")
@@ -53,6 +55,7 @@ def setup():
 						nargs = 4, type = int, metavar = ("r", "g", "b", "a"))
 	parser.add_argument("-B", "--backtrack-color", default = (0, 128, 255, 50), help = "Specifies the color of backtracked positions. The color is given in RGBA form. Default is (0, 128, 255, 50)",
 						nargs = 4, type = int, metavar = ("r", "g", "b", "a"))
+
 	
 
 	args = parser.parse_args()
@@ -67,6 +70,7 @@ def setup():
 	VISITED_COLOR = tuple(args.visited_color)
 	BACKTRACKED_COLOR = tuple(args.backtrack_color)
 	SHOW_BACKTRACK = not args.no_backtrack
+	SHOW_LOAD = not args.no_load
 
 def clear_screen(display):
 	"""
@@ -101,21 +105,20 @@ def run_generator(display, clock, grid):
 				return
 		frame += 1
 		frame %= UPDATES
-		if frame == 0:
+		if frame == 0 and SHOW_LOAD:
 			for row in grid:
 				for cell in row:
 					cell.draw(display, LINE_COLOR, SQUARE_SIZE)
 
-
 			pygame.display.update()
-		clock.tick(FRAMERATE)
+		if SHOW_LOAD:
+			clock.tick(FRAMERATE)
 
 	for row in grid:
 		for cell in row:
 			cell.draw(display, LINE_COLOR, SQUARE_SIZE)
 
 	pygame.display.update()
-
 
 def init_vars():
 	"""
