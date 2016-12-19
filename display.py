@@ -20,7 +20,7 @@ WINDOW_SIZE = None
 SQUARE_SIZE = None
 
 FRAMERATE = None
-UPDATES = None # every other frame
+UPDATE_RATE = None # every other frame
 
 BACKGROUND_COLOR = None
 LINE_COLOR = None
@@ -34,14 +34,14 @@ def setup():
 	"""
 	Sets all global constants to their apropriate values, either a default value or one specified from the command line
 	"""
-	global WINDOW_SIZE, SQUARE_SIZE, FRAMERATE, BACKGROUND_COLOR, LINE_COLOR, UPDATES, CURRENT_COLOR, VISITED_COLOR, BACKTRACKED_COLOR, SHOW_BACKTRACK
+	global WINDOW_SIZE, SQUARE_SIZE, FRAMERATE, BACKGROUND_COLOR, LINE_COLOR, UPDATE_RATE, CURRENT_COLOR, VISITED_COLOR, BACKTRACKED_COLOR, SHOW_BACKTRACK
 
 	parser = argparse.ArgumentParser(description="Randomly creates a maze and displays the proces and the result in a new window")
 	parser.add_argument("-nb", "--no-backtrack", action = "store_true", help = "Does not mark backtrackted positions with a different color")
 	parser.add_argument("-s", "--size", default = (800, 600),  help = "Specifies the window size. Defalut is 800x600.", nargs = 2, type = int, metavar = ("width", "height"))
 	parser.add_argument("-S", "--square-size", default = 20, help = "Specifies the squares' size. Default is 20.", type = int, metavar = "size")
-	parser.add_argument("-f", "--framerate", default = 60, help = "Specifies the framerate. Default is 60 fps.", type = int, metavar ="fps")
-	parser.add_argument("-u", "--update", default = 1, help = "Specifies how oft the screen should update, i.e. a value of 1 means every frame, a value of 2 means every other frame and so on. Default is 1", type=int)
+	parser.add_argument("-f", "-fps", "--frame-rate", default = 60, help = "Specifies the framerate. Default is 60 fps.", type = int, metavar ="fps")
+	parser.add_argument("-u", "-fpu", "--update-rate", default = 1, help = "Specifies how oft the screen should update, i.e. frames per update. Default is 1", type=int, metavar = "fpu")
 	
 	parser.add_argument("-b", "--background-color", default = (32, 32, 32), help = "Specifies the background color. Colors are given in RGB format. Defalut is (32, 32, 32)",
 						nargs = 3, type = int, metavar = ("r", "g", "b"))
@@ -59,10 +59,10 @@ def setup():
 
 	WINDOW_SIZE = tuple(args.size)
 	SQUARE_SIZE = args.square_size
-	FRAMERATE = args.framerate
+	FRAMERATE = args.frame_rate
 	BACKGROUND_COLOR = tuple(args.background_color)
 	LINE_COLOR = tuple(args.line_color)
-	UPDATES = args.update
+	UPDATE_RATE = args.update_rate
 	CURRENT_COLOR = tuple(args.current_color)
 	VISITED_COLOR = tuple(args.visited_color)
 	BACKTRACKED_COLOR = tuple(args.backtrack_color)
@@ -100,7 +100,7 @@ def run_generator(display, clock, grid):
 			if event.type == pygame.QUIT:
 				return
 		frame += 1
-		frame %= UPDATES
+		frame %= UPDATE_RATE
 		if frame == 0:
 			for row in grid:
 				for cell in row:
