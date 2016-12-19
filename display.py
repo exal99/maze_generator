@@ -24,6 +24,11 @@ SQUARE_SIZE = None
 FRAMERATE = None
 UPDATES = None # every other frame
 
+# -- DISPLAY FLAGS -- #
+SHOW_BACKTRACK = None
+SHOW_LOAD = None
+
+# -- COLORS -- #
 BACKGROUND_COLOR = None
 LINE_COLOR = None
 CURRENT_COLOR = None
@@ -32,8 +37,6 @@ BACKTRACKED_COLOR = None
 FROM_COLOR = None
 TO_COLOR = None
 
-SHOW_BACKTRACK = None
-SHOW_LOAD = None
 
 
 # -- PROGRAM SPECIFIC EVENTS -- #
@@ -75,19 +78,19 @@ def setup():
 
 	args = parser.parse_args()
 
-	WINDOW_SIZE = tuple(args.size)
-	SQUARE_SIZE = args.square_size
-	FRAMERATE = args.framerate
-	BACKGROUND_COLOR = tuple(args.background_color)
-	LINE_COLOR = tuple(args.line_color)
-	UPDATES = args.update
-	CURRENT_COLOR = tuple(args.current_color)
-	VISITED_COLOR = tuple(args.visited_color)
+	WINDOW_SIZE 	  = tuple(args.size)
+	SQUARE_SIZE 	  = args.square_size
+	FRAMERATE 		  = args.framerate
+	BACKGROUND_COLOR  = tuple(args.background_color)
+	LINE_COLOR 		  = tuple(args.line_color)
+	UPDATES           = args.update
+	CURRENT_COLOR     = tuple(args.current_color)
+	VISITED_COLOR     = tuple(args.visited_color)
 	BACKTRACKED_COLOR = tuple(args.backtrack_color)
-	SHOW_BACKTRACK = not args.no_backtrack
-	SHOW_LOAD = not args.no_load
-	FROM_COLOR = tuple(args.from_color)
-	TO_COLOR = tuple(args.to_color)
+	SHOW_BACKTRACK    = not args.no_backtrack
+	SHOW_LOAD 		  = not args.no_load
+	FROM_COLOR 		  = tuple(args.from_color)
+	TO_COLOR 		  = tuple(args.to_color)
 
 def clear_screen(display):
 	"""
@@ -290,22 +293,25 @@ def main():
 	pygame.mixer.init()
 	init_vars()
 
-	hit_sound = pygame.mixer.Sound("hit.wav")
-	ding_sound = pygame.mixer.Sound("ding.wav")
-
 	game_display = pygame.display.set_mode(WINDOW_SIZE)
 	pygame.display.set_caption("Maze Generator")
-	clock = pygame.time.Clock()
-	running = True
+
 	background = pygame.Surface(WINDOW_SIZE)
 	background.fill(BACKGROUND_COLOR)
 	game_display.blit(background, (0,0))
-	grid = generator.Grid(WINDOW_SIZE[1] // SQUARE_SIZE, WINDOW_SIZE[0] // SQUARE_SIZE)
+
+	hit_sound  = pygame.mixer.Sound("hit.wav")
+	ding_sound = pygame.mixer.Sound("ding.wav")
+
+	clock      = pygame.time.Clock()
+	running    = True
+	
+	grid       = generator.Grid(WINDOW_SIZE[1] // SQUARE_SIZE, WINDOW_SIZE[0] // SQUARE_SIZE)
 	start_time = -1
 	final_time = -1
 	time_flash = 60
-	hit_flash = 0
-	hits = 0
+	hit_flash  = 0
+	hits       = 0
 	while running:
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
