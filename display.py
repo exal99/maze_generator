@@ -8,7 +8,6 @@ import pygame
 import generator
 import argparse
 import functools
-import sys
 
 RED = (255, 0, 0)
 GREEN = (0,255,0)
@@ -147,8 +146,6 @@ def keypress_handler(display, clock, event, grid):
 	}
 	if event.key in keybindings:
 		res = keybindings[event.key]()
-		print()
-		sys.stdout.flush()
 		return res
 	else:
 		return None
@@ -170,33 +167,26 @@ def move(grid, direction, current):
 		(0 ,  1): 1
 	}
 	new_pos = generator.Vector(direction) + (current.row, current.col)
-	print("NEW POS:", new_pos)
 	if new_pos[0] >= 0 and new_pos[1] >= 0 and new_pos[0] < grid.rows and new_pos[1] < grid.cols:
 		to_move_to = grid[new_pos]
-		print("WALLS", current.walls)
 		if not current.walls[wall_map[direction]]:
 			to_move_to.current = True
 			current.current = False
-			print(to_move_to.row, to_move_to.col)
 			return to_move_to
 		else:
 			return current
 	else:
-		print(current)
 		return current
 
 def arrow_key(grid, direction):
 	if grid.current is None:
 		grid.current = find_start(grid)
 		grid.current.current = True
-	print("INSIDE", grid.current)
 	grid.current = move(grid, direction, grid.current)
-	print("MOVE", (grid.current.row, grid.current.col) if grid.current is not None else None, direction)
 
 def find_start(grid):
 	for cell in grid:
 		if cell.start:
-			print("found cell:", (cell.row, cell.col))
 			return cell
 
 def main():
