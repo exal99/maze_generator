@@ -68,7 +68,7 @@ class Cell:
 	def __str__(self):
 		return self.__repr__()
 
-	def draw(self, display, color, size):
+	def draw(self, display, color, size, force_draw = False):
 		"""
 		Draws the cell onto the given display with the given color and size if (and only if) the have been a change
 		sice the last call of draw. Otherwise this method has no effect. The color is a RGB color.
@@ -77,11 +77,13 @@ class Cell:
 		display		-	The surface to draw on
 		color 		- 	The color to use for drawing the lines around the cell
 		size 		- 	The size of the cell in pixels
+		force_draw	-	Forcec the cell to paint itself, regardles of any change
 
 		Types:
 		display 	- 	pygame.Surface
 		color 		-	tuple
 		size		-	tuple
+		force_draw 	-	bool
 		"""
 		to_compare = {
 			"walls": self.walls,
@@ -92,7 +94,7 @@ class Cell:
 			"end": self.end
 		}
 
-		if to_compare != self.last_draw:
+		if to_compare != self.last_draw or force_draw:
 			pygame.draw.rect(display, self.BACKGROUND_COLOR, pygame.Rect(Vector((self.col, self.row)) * size, (size, size)))
 			self.__draw(display, color, size)
 			self.last_draw["walls"] = self.walls[:]
@@ -128,13 +130,13 @@ class Cell:
 			pygame.draw.line(display, color, (self.col * size       , self.row * size + size), (self.col * size       , self.row * size))
 
 		if self.current:
-			draw_rect_with_alpha(display, self.CURRENT_COLOR, Vector((self.col, self.row)) * size, (size, size))
+			draw_rect_with_alpha(display, self.CURRENT_COLOR, Vector((self.col, self.row)) * size + (1, 1), (size - 2, size - 2))
 
 		elif self.start:
-			draw_rect_with_alpha(display, self.START_COLOR, Vector((self.col, self.row)) * size, (size, size))
+			draw_rect_with_alpha(display, self.START_COLOR, Vector((self.col, self.row)) * size  + (1, 1), (size - 2, size - 2))
 
 		elif self.end:
-			draw_rect_with_alpha(display, self.END_COLOR, Vector((self.col, self.row)) * size, (size, size))
+			draw_rect_with_alpha(display, self.END_COLOR, Vector((self.col, self.row)) * size  + (1, 1), (size - 2, size - 2))
 
 		elif self.backtracked and self.SHOW_BACKTRACK:
 			draw_rect_with_alpha(display, self.BACKTRACKED_COLOR, Vector((self.col, self.row)) * size, (size, size))
@@ -210,6 +212,12 @@ class Vector(tuple):
 	def __mul__(self, other):
 		return Vector([e * other for e in self])
 
+	def __truediv__(self, other):
+		return Vector([e / other for e in self])
+
+	def __floordiv__(self, other):
+		return Vector([e // other for e in self])
+
 	def __add__(self, other):
 		return Vector([a + b for a, b in zip(self, other)])
 
@@ -223,6 +231,8 @@ class Grid:
 		self.rows = rows
 		self.cols = cols
 		self.current = None
+		self.start = None
+		self.end = None
 
 	def __getitem__(self, pos):
 		return self.grid[pos[0]][pos[1]]

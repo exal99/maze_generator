@@ -34,6 +34,12 @@ TO_COLOR = None
 SHOW_BACKTRACK = None
 SHOW_LOAD = None
 
+
+# -- PROGRAM SPECIFIC EVENTS -- #
+START_CLOCK = pygame.USEREVENT + 1
+STOP_CLOCK  = pygame.USEREVENT + 2
+HIT_WALL    = pygame.USEREVENT + 3
+
 def setup():
 	"""
 	Sets all global constants to their apropriate values, either a default value or one specified from the command line
@@ -108,10 +114,16 @@ def run_generator(display, clock, grid):
 	clock 		- 	pygame.time.Clock
 	grid 		- 	generation.Grid
 	"""
+	global SHOW_LOAD
+	prev_show = SHOW_LOAD
 	frame = 0
 	for current in generator.make_maze(grid):
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
+				return False
+			if event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
+				SHOW_LOAD = False
+			if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
 				return False
 		frame += 1
 		frame %= UPDATES
@@ -121,6 +133,7 @@ def run_generator(display, clock, grid):
 			clock.tick(FRAMERATE)
 
 	pick_positions(grid)
+	SHOW_LOAD = prev_show
 	return True
 
 def init_vars():
@@ -137,12 +150,13 @@ def init_vars():
 
 def keypress_handler(display, clock, event, grid):
 	keybindings = {
-		pygame.K_c     : grid.reset,
-		pygame.K_SPACE : lambda : run_generator(display, clock, grid) if not grid[0,0].visited else None,
-		pygame.K_UP    : functools.partial(arrow_key, grid, (-1, 0)),
-		pygame.K_DOWN  : functools.partial(arrow_key, grid, (1, 0)),
-		pygame.K_LEFT  : functools.partial(arrow_key, grid, (0, -1)),
-		pygame.K_RIGHT : functools.partial(arrow_key, grid, (0, 1))
+		pygame.K_c      : functools.partial(reset, display, grid),
+		pygame.K_SPACE  : lambda : run_generator(display, clock, grid) if not grid[0,0].visited else None,
+		pygame.K_UP     : functools.partial(arrow_key, grid, (-1, 0)),
+		pygame.K_DOWN   : functools.partial(arrow_key, grid, (1, 0)),
+		pygame.K_LEFT   : functools.partial(arrow_key, grid, (0, -1)),
+		pygame.K_RIGHT  : functools.partial(arrow_key, grid, (0, 1)),
+		pygame.K_ESCAPE : lambda : False
 	}
 	if event.key in keybindings:
 		res = keybindings[event.key]()
@@ -150,14 +164,23 @@ def keypress_handler(display, clock, event, grid):
 	else:
 		return None
 
+def reset(display, grid):
+	grid.reset()
+	pygame.event.post(pygame.event.Event(STOP_CLOCK, finnished=False))
+	for cell in grid:
+		cell.draw(display, LINE_COLOR, SQUARE_SIZE, force_draw = True)
+
 def draw_grid(display, grid):
 	for cell in grid:
 		cell.draw(display, LINE_COLOR, SQUARE_SIZE)
 	pygame.display.update()
 
 def pick_positions(grid):
-	grid[0,0].start = True
-	grid[grid.rows - 1, grid.cols - 1].end = True
+	grid.start = grid[0,0]
+	grid.start.start = True
+
+	grid.end = grid[grid.rows - 1, grid.cols - 1]
+	grid.end.end = True
 
 def move(grid, direction, current):
 	wall_map = {
@@ -172,29 +195,90 @@ def move(grid, direction, current):
 		if not current.walls[wall_map[direction]]:
 			to_move_to.current = True
 			current.current = False
+			if to_move_to == grid.end:
+				pygame.event.post(pygame.event.Event(STOP_CLOCK, finnished=True))
+				to_move_to.current = False
+				return None
 			return to_move_to
 		else:
+			pygame.event.post(pygame.event.Event(HIT_WALL))
 			return current
 	else:
+		pygame.event.post(pygame.event.Event(HIT_WALL))
 		return current
 
 def arrow_key(grid, direction):
 	if grid.current is None:
-		grid.current = find_start(grid)
+		grid.current = grid.start
 		grid.current.current = True
+		pygame.event.post(pygame.event.Event(START_CLOCK))
 	grid.current = move(grid, direction, grid.current)
 
-def find_start(grid):
-	for cell in grid:
-		if cell.start:
-			return cell
+def display_text(display, text, color, size, pos, grid):
+	font = pygame.font.SysFont("monospace", size)
+	label = font.render(text, 1, color)
+	if type(pos) == str:
+		display_pos = tuple([e for e in map(int, (generator.Vector((display.get_size())) / 2) - generator.Vector(label.get_size())/2)])
+
+		if "south" in pos:
+			display_pos = (display_pos[0], display.get_height() - label.get_height())
+		elif "north" in pos:
+			display_pos = (display_pos[0], 0)
+
+		if "east" in pos:
+			display_pos = (display.get_width() - label.get_width(), display_pos[1])
+		elif "west" in pos:
+			display_pos = (0, display_pos[1])
+		pos = display_pos
+
+	force_update_surface(display, label, pos, grid)
+	display.blit(label, pos)
+	return label, pos
+
+def force_update_surface(display, surface, pos, grid):
+	to_pos = generator.Vector(surface.get_size()) + pos
+	from_index =(pos[1] // SQUARE_SIZE, pos[0] // SQUARE_SIZE)   # row col
+	to_index = (to_pos[1] // SQUARE_SIZE, to_pos[0] // SQUARE_SIZE)
+	#print(from_index, to_index)
+
+	if from_index[0] != to_index[0] and from_index[1] != to_index[1]:
+		for row in range(from_index[0], to_index[0]):
+			for col in range(from_index[1], to_index[1]):
+				#print(row, col)
+				grid[row,col].draw(display, LINE_COLOR, SQUARE_SIZE, force_draw = True)
+	elif from_index[0] != to_index[0]:
+		for row in range(from_index[0], to_index[0]):
+			grid[row,from_index[1]].draw(display, LINE_COLOR, SQUARE_SIZE, force_draw = True)
+	else:
+		for col in range(from_index[1], to_index[1]):
+			grid[from_index[0],col].draw(display, LINE_COLOR, SQUARE_SIZE, force_draw = True)
+
+def format_time(time):
+	hundrets = (time // 10) % 100
+	seconds = time // 1000
+	minutes = seconds // 60
+	seconds %= 60
+
+	return minutes, seconds, hundrets
+
+def display_timer(display, start_time, grid):
+	time_passed = pygame.time.get_ticks() - start_time
+	display_text(display, "%d:%02d.%02d" %(format_time(time_passed)), RED, 30, "north east", grid)
+
+def display_time(display, time, grid):
+	display_text(display, "%d:%02d.%02d" %(format_time(time)), RED, 30, "north east", grid)
+
 
 def main():
 	"""
 	Main function of the program.
 	"""
 	pygame.init()
+	pygame.font.init()
+	pygame.mixer.init()
 	init_vars()
+
+	hit_sound = pygame.mixer.Sound("hit.wav")
 	game_display = pygame.display.set_mode(WINDOW_SIZE)
 	pygame.display.set_caption("Maze Generator")
 	clock = pygame.time.Clock()
@@ -203,7 +287,10 @@ def main():
 	background.fill(BACKGROUND_COLOR)
 	game_display.blit(background, (0,0))
 	grid = generator.Grid(WINDOW_SIZE[1] // SQUARE_SIZE, WINDOW_SIZE[0] // SQUARE_SIZE)
-
+	start_time = -1
+	final_time = -1
+	time_flash = 60
+	hit_flash = 0
 	while running:
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
@@ -212,8 +299,40 @@ def main():
 				res = keypress_handler(game_display, clock, event, grid)
 				if res == False:
 					return
+			if event.type == START_CLOCK:
+				start_time = pygame.time.get_ticks()
+				final_time = -1
+			if event.type == STOP_CLOCK:
+				if event.finnished:
+					final_time = pygame.time.get_ticks() - start_time
+				else:
+					final_time = -1
+				start_time = -1
+			if event.type == HIT_WALL:
+				hit_sound.play().play(hit_sound)
+				hit_flash = 10
 
 		draw_grid(game_display, grid)
+
+		if hit_flash % 2 and hit_flash > -1:
+			generator.draw_rect_with_alpha(game_display, (255, 0, 0, 100), (0,0), WINDOW_SIZE)
+			pygame.display.update()
+		elif hit_flash > -1:
+			force_update_surface(game_display, pygame.Surface(WINDOW_SIZE), (0,0), grid)
+
+		if start_time != -1:
+			display_timer(game_display, start_time, grid)
+		elif final_time != -1:
+			if time_flash > FRAMERATE / 2:
+				display_time(game_display, final_time, grid)
+			if time_flash < FRAMERATE / 2:
+				label, pos = display_text(game_display, "%d:%02d.%02d" %(format_time(final_time)), RED, 30, "north east", grid)
+				force_update_surface(game_display, label, pos, grid)
+			time_flash = max(time_flash - 1, 0)
+			if time_flash == 0:
+				time_flash = FRAMERATE
+
+		hit_flash = max(hit_flash - 1, 0)
 		clock.tick(FRAMERATE)
 
 if __name__ == '__main__':
