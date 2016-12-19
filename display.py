@@ -207,6 +207,7 @@ def move(grid, direction, current):
 		if to_move_to == grid.end:
 			pygame.event.post(pygame.event.Event(STOP_CLOCK, finnished=True))
 			to_move_to.current = False
+			current.current = False
 			return None
 
 		current.current = False
