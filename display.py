@@ -204,7 +204,7 @@ def draw_grid(display, grid):
 	pygame.display.update()
 
 def pick_positions(grid):
-	grid.start = grid[0,0]
+	#grid.start = grid[0,0]
 	grid.start.start = True
 
 	#grid.end = grid[grid.rows - 1, grid.cols - 1]
@@ -364,11 +364,12 @@ def main():
 
 			if event.type == STOP_CLOCK:
 				if event.finished:
-					final_time = pygame.time.get_ticks() - start_time + time_offset
+					final_time = pygame.time.get_ticks() - (start_time + time_offset)
 					final_hits = hits
 					ding_sound.play()
 				grid.visited = set()
-				start_time = -1
+				start_time   = -1
+				time_offset  = 0
 
 			if event.type == RESET_CLOCK:
 				final_time = -1
@@ -406,7 +407,7 @@ def main():
 
 		if start_time > -1:
 			display_timer(game_display, start_time + time_offset, grid, 40)
-		elif final_time > -1:
+		elif final_time != -1:
 			if time_flash > FRAMERATE / 2:
 				display_time(game_display, final_time, grid, 40)
 			if time_flash < FRAMERATE / 2:

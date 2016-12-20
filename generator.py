@@ -233,10 +233,11 @@ class Grid:
 		self.rows = rows
 		self.cols = cols
 		self.current = None
-		self.start = None
+		#self.start = None
 		self.end = None
 		self.max_steps = self.grid[0][0]
 		self.visited = set()
+		self.start = None
 
 	def __getitem__(self, pos):
 		return self.grid[pos[0]][pos[1]]
@@ -286,7 +287,9 @@ def make_maze(grid):
 					algorithm.
 	Yield type 	-	Cell
 	"""
-	current = grid[0, 0]
+	#current = grid[0, 0]
+	current = grid[random.randint(0, grid.rows - 1), random.randint(0, grid.cols - 1)]
+	grid.start = current
 	current.visited = True
 	current.current = True
 	visited = [current]
