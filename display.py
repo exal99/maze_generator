@@ -40,12 +40,13 @@ TO_COLOR = None
 MAX_BACKTRACK = None
 
 # -- PROGRAM SPECIFIC EVENTS -- #
-START_CLOCK = pygame.USEREVENT + 1
-STOP_CLOCK  = pygame.USEREVENT + 2
-RESET_CLOCK = pygame.USEREVENT + 3
-HIT_WALL    = pygame.USEREVENT + 4
-LOAD_DONE 	= pygame.USEREVENT + 5
-REMOVE_TEXT = pygame.USEREVENT + 6
+START_CLOCK    = pygame.USEREVENT + 1
+STOP_CLOCK     = pygame.USEREVENT + 2
+RESET_CLOCK    = pygame.USEREVENT + 3
+HIT_WALL       = pygame.USEREVENT + 4
+LOAD_DONE 	   = pygame.USEREVENT + 5
+REMOVE_TEXT    = pygame.USEREVENT + 6
+DING_FINISHED = pygame.USEREVENT + 7
 
 def setup():
 	"""
@@ -334,6 +335,12 @@ def main():
 
 	hit_sound  = pygame.mixer.Sound("hit.wav")
 	ding_sound = pygame.mixer.Sound("ding.wav")
+	music 	   = pygame.mixer.Sound("metal_gear.wav")
+	wait_music = pygame.mixer.Sound("jeperdy.wav")
+	#music 	   = pygame.mixer.Sound("finaly_fantasy(2x).wav")
+
+	hit_sound.set_volume(1)
+	music.set_volume(0.5)
 
 	clock      = pygame.time.Clock()
 	running    = True
@@ -347,6 +354,7 @@ def main():
 	final_hits = -1
 	time_offset = 0
 	displaying_text = False
+	wait_music.play(loops=-1, fade_ms=500)
 	while running:
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
@@ -361,12 +369,18 @@ def main():
 				start_time = pygame.time.get_ticks()
 				final_time = -1
 				hits       = 0
+				wait_music.stop()
+				music.play(loops=-1)
 
 			if event.type == STOP_CLOCK:
+				music.stop()
 				if event.finished:
 					final_time = pygame.time.get_ticks() - (start_time + time_offset)
 					final_hits = hits
-					ding_sound.play()
+					ding_sound.play().set_endevent(DING_FINISHED)
+				else:
+					if wait_music.get_num_channels() == 0:
+						wait_music.play(loops=-1, fade_ms=500)
 				grid.visited = set()
 				start_time   = -1
 				time_offset  = 0
@@ -378,6 +392,9 @@ def main():
 				final_hits = -1
 				time_offset = 0
 				force_update_screen(game_display, grid)
+				music.stop()
+				if wait_music.get_num_channels() == 0:
+					wait_music.play(loops=-1, fade_ms=500)
 
 			if event.type == HIT_WALL:
 				hit_sound.play().play(hit_sound)
@@ -392,6 +409,9 @@ def main():
 			if event.type == REMOVE_TEXT:
 				displaying_text = False
 				hits = -1
+
+			if event.type == DING_FINISHED:
+				wait_music.play(loops=-1, fade_ms=500)
 
 		draw_grid(game_display, grid)
 		if hits > -1:
