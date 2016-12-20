@@ -331,9 +331,8 @@ def main():
 
 			if event.type == STOP_CLOCK:
 				if event.finished:
-					final_hits = hits
-				if event.finished:
 					final_time = pygame.time.get_ticks() - start_time
+					final_hits = hits
 					ding_sound.play()
 				else:
 					final_time = -1
