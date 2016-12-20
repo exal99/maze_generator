@@ -240,8 +240,8 @@ def move(grid, direction, current):
 		pygame.event.post(pygame.event.Event(HIT_WALL))
 		to_move_to = get_random_visited(grid, current)
 
-	to_move_to.current = True
 	current.current = False
+	to_move_to.current = True
 	grid.visited.add(to_move_to)
 	return to_move_to
 
