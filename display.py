@@ -183,7 +183,8 @@ def pick_positions(grid):
 	grid.start = grid[0,0]
 	grid.start.start = True
 
-	grid.end = grid[grid.rows - 1, grid.cols - 1]
+	#grid.end = grid[grid.rows - 1, grid.cols - 1]
+	grid.end = grid.max_steps
 	grid.end.end = True
 
 def move(grid, direction, current):
@@ -317,14 +318,17 @@ def main():
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
 				return
+
 			if event.type == pygame.KEYDOWN:
 				res = keypress_handler(game_display, clock, event, grid)
 				if res == False:
 					return
+
 			if event.type == START_CLOCK:
 				start_time = pygame.time.get_ticks()
 				final_time = -1
 				hits = 0
+
 			if event.type == STOP_CLOCK:
 				if event.finnished:
 					final_hits = hits
@@ -337,10 +341,12 @@ def main():
 
 				grid.visited = set()
 				start_time = -1
+
 			if event.type == HIT_WALL:
 				hit_sound.play().play(hit_sound)
 				hit_flash = 10
 				hits += 1
+				start_time -= 10000
 
 		draw_grid(game_display, grid)
 		if hits > -1:
