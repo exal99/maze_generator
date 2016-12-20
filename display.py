@@ -37,7 +37,7 @@ BACKTRACKED_COLOR = None
 FROM_COLOR = None
 TO_COLOR = None
 
-
+MAX_BACKTRACK = None
 
 # -- PROGRAM SPECIFIC EVENTS -- #
 START_CLOCK = pygame.USEREVENT + 1
@@ -49,7 +49,7 @@ def setup():
 	Sets all global constants to their apropriate values, either a default value or one specified from the command line
 	"""
 	global WINDOW_SIZE, SQUARE_SIZE, FRAMERATE, BACKGROUND_COLOR, LINE_COLOR, UPDATES, CURRENT_COLOR, VISITED_COLOR
-	global BACKTRACKED_COLOR, SHOW_BACKTRACK, SHOW_LOAD, FROM_COLOR, TO_COLOR
+	global BACKTRACKED_COLOR, SHOW_BACKTRACK, SHOW_LOAD, FROM_COLOR, TO_COLOR, MAX_BACKTRACK
 
 	parser = argparse.ArgumentParser(description="Randomly creates a maze and displays the proces and the result in a new window")
 	parser.add_argument("-nl", "--no-load", action = "store_true", help = "Skips the loadingprocec of the maze generation")
@@ -58,6 +58,7 @@ def setup():
 	parser.add_argument("-S", "--square-size", default = 20, help = "Specifies the squares' size. Default is 20.", type = int, metavar = "size")
 	parser.add_argument("-f", "--framerate", default = 60, help = "Specifies the framerate. Default is 60 fps.", type = int, metavar ="fps")
 	parser.add_argument("-u", "--update", default = 1, help = "Specifies how oft the screen should update, i.e. a value of 1 means every frame, a value of 2 means every other frame and so on. Default is 1", type=int)
+	parser.add_argument("-mb", "--max-backtrack", default = -10, help = "Specifies the number of maximum steps required to get back when hitting a wall. Default is -10", type = parse_backtrack, action = "store")
 
 	parser.add_argument("-b", "--background-color", default = (32, 32, 32), help = "Specifies the background color. Colors are given in RGB format. Defalut is (32, 32, 32)",
 						nargs = 3, type = int, metavar = ("r", "g", "b"))
@@ -76,21 +77,34 @@ def setup():
 
 
 
+
 	args = parser.parse_args()
 
 	WINDOW_SIZE 	  = tuple(args.size)
 	SQUARE_SIZE 	  = args.square_size
 	FRAMERATE 		  = args.framerate
+	UPDATES           = args.update
+
+	SHOW_BACKTRACK    = not args.no_backtrack
+	SHOW_LOAD 		  = not args.no_load
+
+	MAX_BACKTRACK	  = args.max_backtrack
+
 	BACKGROUND_COLOR  = tuple(args.background_color)
 	LINE_COLOR 		  = tuple(args.line_color)
-	UPDATES           = args.update
 	CURRENT_COLOR     = tuple(args.current_color)
 	VISITED_COLOR     = tuple(args.visited_color)
 	BACKTRACKED_COLOR = tuple(args.backtrack_color)
-	SHOW_BACKTRACK    = not args.no_backtrack
-	SHOW_LOAD 		  = not args.no_load
 	FROM_COLOR 		  = tuple(args.from_color)
 	TO_COLOR 		  = tuple(args.to_color)
+
+def parse_backtrack(value):
+	if "-inf" in value:
+		return float("-inf")
+	elif value.isnumeric() and int(value) < 0:
+		return int(value)
+	else:
+		raise argparse.ArgumentTypeError("Value needs to be less than 0")
 
 def clear_screen(display):
 	"""
@@ -187,6 +201,8 @@ def pick_positions(grid):
 	grid.end = grid.max_steps
 	grid.end.end = True
 
+	grid.visited.add(grid.start)
+
 def move(grid, direction, current):
 	wall_map = {
 		(1 ,  0): 3,
@@ -201,10 +217,11 @@ def move(grid, direction, current):
 			to_move_to.current = True
 		else:
 			pygame.event.post(pygame.event.Event(HIT_WALL))
-			if len(grid.visited) > 0:
-				to_move_to = random.choice(list(grid.visited))
-			else:
-				to_move_to = current
+			to_move_to = get_random_visited(grid, current)
+			# if len(grid.visited) > 0:
+			# 	to_move_to = random.choice(list(grid.visited))
+			# else:
+			# 	to_move_to = current
 
 		if to_move_to == grid.end:
 			pygame.event.post(pygame.event.Event(STOP_CLOCK, finished=True))
@@ -214,15 +231,25 @@ def move(grid, direction, current):
 
 	else:
 		pygame.event.post(pygame.event.Event(HIT_WALL))
-		if len(grid.visited) > 0:
-			to_move_to = random.choice(list(grid.visited))
-		else:
-			to_move_to = current
+		to_move_to = get_random_visited(grid, current)
+		# if len(grid.visited) > 0:
+		# 	to_move_to = random.choice(list(grid.visited))
+		# else:
+		# 	to_move_to = current
 
 	to_move_to.current = True
 	current.current = False
 	grid.visited.add(to_move_to)
 	return to_move_to
+
+def get_random_visited(grid, current):
+	if len(grid.visited) == 0:
+		return current
+	else:
+		to_return = random.choice(list(grid.visited))
+		while not MAX_BACKTRACK <= to_return.steps - current.steps <= 0:
+			to_return = random.choice(list(grid.visited))
+		return to_return
 
 def arrow_key(grid, direction):
 	if grid.start is not None:
