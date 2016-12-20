@@ -317,6 +317,11 @@ def display_time(display, time, grid, font_size):
 def force_update_screen(display, grid):
 	force_update_surface(display, pygame.Surface((grid.cols * SQUARE_SIZE, grid.rows * SQUARE_SIZE)), (0,0), grid)
 
+def play_music(file_name, loops =-1):
+	pygame.mixer.music.stop()
+	pygame.mixer.music.load(file_name)
+	pygame.mixer.music.play(loops=loops)
+
 def main():
 	"""
 	Main function of the program.
@@ -335,12 +340,10 @@ def main():
 
 	hit_sound  = pygame.mixer.Sound("hit.wav")
 	ding_sound = pygame.mixer.Sound("ding.wav")
-	music 	   = pygame.mixer.Sound("metal_gear.wav")
-	wait_music = pygame.mixer.Sound("jeperdy.wav")
-	#music 	   = pygame.mixer.Sound("finaly_fantasy(2x).wav")
+	#music 	   = pygame.mixer.Sound("metal_gear.wav")
+	#wait_music = pygame.mixer.Sound("jeperdy.wav")
 
 	hit_sound.set_volume(1)
-	music.set_volume(0.5)
 
 	clock      = pygame.time.Clock()
 	running    = True
@@ -354,7 +357,8 @@ def main():
 	final_hits = -1
 	time_offset = 0
 	displaying_text = False
-	wait_music.play(loops=-1, fade_ms=500)
+	play_music("jeperdy.wav")
+	is_playing_wait = True
 	while running:
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
@@ -369,18 +373,20 @@ def main():
 				start_time = pygame.time.get_ticks()
 				final_time = -1
 				hits       = 0
-				wait_music.stop()
-				music.play(loops=-1)
+				play_music("metal_gear.wav")
+				is_playing_wait = False
 
 			if event.type == STOP_CLOCK:
-				music.stop()
 				if event.finished:
 					final_time = pygame.time.get_ticks() - (start_time + time_offset)
 					final_hits = hits
-					ding_sound.play().set_endevent(DING_FINISHED)
+					play_music("ding.wav", loops=0)
+					is_playing_wait = False
+					pygame.mixer.music.set_endevent(DING_FINISHED)
 				else:
-					if wait_music.get_num_channels() == 0:
-						wait_music.play(loops=-1, fade_ms=500)
+					if not is_playing_wait:
+						play_music("jeperdy.wav")
+						is_playing_wait = True
 				grid.visited = set()
 				start_time   = -1
 				time_offset  = 0
@@ -392,9 +398,9 @@ def main():
 				final_hits = -1
 				time_offset = 0
 				force_update_screen(game_display, grid)
-				music.stop()
-				if wait_music.get_num_channels() == 0:
-					wait_music.play(loops=-1, fade_ms=500)
+				if not is_playing_wait:
+					play_music("jeperdy.wav")
+					is_playing_wait = True
 
 			if event.type == HIT_WALL:
 				hit_sound.play().play(hit_sound)
@@ -411,7 +417,10 @@ def main():
 				hits = -1
 
 			if event.type == DING_FINISHED:
-				wait_music.play(loops=-1, fade_ms=500)
+				if not is_playing_wait:
+					play_music("jeperdy.wav")
+					is_playing_wait = True
+				pygame.mixer.music.set_endevent()
 
 		draw_grid(game_display, grid)
 		if hits > -1:
