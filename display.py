@@ -42,7 +42,10 @@ MAX_BACKTRACK = None
 # -- PROGRAM SPECIFIC EVENTS -- #
 START_CLOCK = pygame.USEREVENT + 1
 STOP_CLOCK  = pygame.USEREVENT + 2
-HIT_WALL    = pygame.USEREVENT + 3
+RESET_CLOCK = pygame.USEREVENT + 3
+HIT_WALL    = pygame.USEREVENT + 4
+LOAD_DONE 	= pygame.USEREVENT + 5
+REMOVE_TEXT = pygame.USEREVENT + 6
 
 def setup():
 	"""
@@ -132,26 +135,25 @@ def run_generator(display, clock, grid):
 	clock 		- 	pygame.time.Clock
 	grid 		- 	generation.Grid
 	"""
-	global SHOW_LOAD
-	prev_show = SHOW_LOAD
+	skip_load = False
 	frame = 0
 	for current in generator.make_maze(grid):
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
 				return False
 			if event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
-				SHOW_LOAD = False
+				skip_load = True
 			if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
 				return False
 		frame += 1
 		frame %= UPDATES
-		if frame == 0 and SHOW_LOAD:
+		if frame == 0 and SHOW_LOAD and not skip_load:
 			draw_grid(display, grid)
-		if SHOW_LOAD:
+		if SHOW_LOAD and not skip_load:
 			clock.tick(FRAMERATE)
 
 	pick_positions(grid)
-	SHOW_LOAD = prev_show
+	pygame.event.post(pygame.event.Event(LOAD_DONE))
 	return True
 
 def init_vars():
@@ -174,7 +176,8 @@ def keypress_handler(display, clock, event, grid):
 		pygame.K_DOWN   : functools.partial(arrow_key, grid, (1, 0)),
 		pygame.K_LEFT   : functools.partial(arrow_key, grid, (0, -1)),
 		pygame.K_RIGHT  : functools.partial(arrow_key, grid, (0, 1)),
-		pygame.K_ESCAPE : lambda : False
+		pygame.K_ESCAPE : lambda : False,
+		pygame.K_r 		: lambda : soft_reset(grid)
 	}
 	if event.key in keybindings:
 		res = keybindings[event.key]()
@@ -182,11 +185,18 @@ def keypress_handler(display, clock, event, grid):
 	else:
 		return None
 
+def soft_reset(grid):
+	if grid.current is not None:
+		grid.current.current = False
+		grid.current = None
+		pygame.event.post(pygame.event.Event(RESET_CLOCK))
+
 def reset(display, grid):
 	grid.reset()
-	pygame.event.post(pygame.event.Event(STOP_CLOCK, finished=False))
+	pygame.event.post(pygame.event.Event(RESET_CLOCK))
 	for cell in grid:
 		cell.draw(display, LINE_COLOR, SQUARE_SIZE, force_draw = True)
+	pygame.event.post(pygame.event.Event(REMOVE_TEXT))
 
 def draw_grid(display, grid):
 	for cell in grid:
@@ -218,10 +228,6 @@ def move(grid, direction, current):
 		else:
 			pygame.event.post(pygame.event.Event(HIT_WALL))
 			to_move_to = get_random_visited(grid, current)
-			# if len(grid.visited) > 0:
-			# 	to_move_to = random.choice(list(grid.visited))
-			# else:
-			# 	to_move_to = current
 
 		if to_move_to == grid.end:
 			pygame.event.post(pygame.event.Event(STOP_CLOCK, finished=True))
@@ -232,10 +238,6 @@ def move(grid, direction, current):
 	else:
 		pygame.event.post(pygame.event.Event(HIT_WALL))
 		to_move_to = get_random_visited(grid, current)
-		# if len(grid.visited) > 0:
-		# 	to_move_to = random.choice(list(grid.visited))
-		# else:
-		# 	to_move_to = current
 
 	to_move_to.current = True
 	current.current = False
@@ -311,6 +313,8 @@ def display_timer(display, start_time, grid, font_size):
 def display_time(display, time, grid, font_size):
 	display_text(display, "%d:%02d.%02d" %(format_time(time)), RED, font_size, "north east", grid)
 
+def force_update_screen(display, grid):
+	force_update_surface(display, pygame.Surface((grid.cols * SQUARE_SIZE, grid.rows * SQUARE_SIZE)), (0,0), grid)
 
 def main():
 	"""
@@ -341,6 +345,8 @@ def main():
 	hit_flash  = 0
 	hits       = -1
 	final_hits = -1
+	time_offset = 0
+	displaying_text = False
 	while running:
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
@@ -354,26 +360,37 @@ def main():
 			if event.type == START_CLOCK:
 				start_time = pygame.time.get_ticks()
 				final_time = -1
-				hits = 0
+				hits       = 0
 
 			if event.type == STOP_CLOCK:
 				if event.finished:
-					final_time = pygame.time.get_ticks() - start_time
+					final_time = pygame.time.get_ticks() - start_time + time_offset
 					final_hits = hits
 					ding_sound.play()
-				else:
-					final_time = -1
-					hits = -1
-					final_hits = -1
-
 				grid.visited = set()
 				start_time = -1
+
+			if event.type == RESET_CLOCK:
+				final_time = -1
+				start_time = -1
+				hits       = -1
+				final_hits = -1
+				time_offset = 0
+				force_update_screen(game_display, grid)
 
 			if event.type == HIT_WALL:
 				hit_sound.play().play(hit_sound)
 				hit_flash = 10
 				hits += 1
-				start_time -= 10000
+				time_offset -= 10000
+
+			if event.type == LOAD_DONE:
+				displaying_text = True
+				hits = 0
+
+			if event.type == REMOVE_TEXT:
+				displaying_text = False
+				hits = -1
 
 		draw_grid(game_display, grid)
 		if hits > -1:
@@ -385,11 +402,11 @@ def main():
 			generator.draw_rect_with_alpha(game_display, (255, 0, 0, 100), (0,0), WINDOW_SIZE)
 			pygame.display.update()
 		elif hit_flash > -1:
-			force_update_surface(game_display, pygame.Surface((grid.cols * SQUARE_SIZE, grid.rows * SQUARE_SIZE)), (0,0), grid)
+			force_update_screen(game_display, grid)
 
-		if start_time != -1:
-			display_timer(game_display, start_time, grid, 40)
-		elif final_time != -1:
+		if start_time > -1:
+			display_timer(game_display, start_time + time_offset, grid, 40)
+		elif final_time > -1:
 			if time_flash > FRAMERATE / 2:
 				display_time(game_display, final_time, grid, 40)
 			if time_flash < FRAMERATE / 2:
@@ -398,6 +415,8 @@ def main():
 			time_flash = max(time_flash - 1, 0)
 			if time_flash == 0:
 				time_flash = FRAMERATE
+		elif displaying_text:
+			display_time(game_display, 0, grid, 40)
 
 		hit_flash = max(hit_flash - 1, -1)
 		clock.tick(FRAMERATE)
