@@ -352,7 +352,7 @@ def main():
 			generator.draw_rect_with_alpha(game_display, (255, 0, 0, 100), (0,0), WINDOW_SIZE)
 			pygame.display.update()
 		elif hit_flash > -1:
-			force_update_surface(game_display, pygame.Surface(WINDOW_SIZE), (0,0), grid)
+			force_update_surface(game_display, pygame.Surface((grid.cols * SQUARE_SIZE, grid.rows * SQUARE_SIZE)), (0,0), grid)
 
 		if start_time != -1:
 			display_timer(game_display, start_time, grid, 40)
