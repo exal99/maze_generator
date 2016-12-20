@@ -1,6 +1,6 @@
 """
 This module is for generating a random maze using a recursive backtracking
-algorithm and then display it on a pygame.Surface surface.
+algorithm and then displaying it on a pygame.Surface surface.
 """
 
 import pygame
@@ -71,14 +71,15 @@ class Cell:
 
 	def draw(self, display, color, size, force_draw = False):
 		"""
-		Draws the cell onto the given display with the given color and size if (and only if) the have been a change
-		sice the last call of draw. Otherwise this method has no effect. The color is a RGB color.
+		Draws the cell onto the given display with the given color and size if (and only if)
+		there has been a change since the last call of draw.
+		Otherwise this method has no effect. The color is a RGB color.
 
 		Args:
 		display		-	The surface to draw on
 		color 		- 	The color to use for drawing the lines around the cell
 		size 		- 	The size of the cell in pixels
-		force_draw	-	Forcec the cell to paint itself, regardles of any change
+		force_draw	-	Forces the cell to paint itself, regardless of any change
 
 		Types:
 		display 	- 	pygame.Surface
@@ -108,8 +109,8 @@ class Cell:
 
 	def __draw(self, display, color, size):
 		"""
-		Used internally for drawing the cell onto the display regardles of any change or not. This method
-		should not be called outside of Cell as it is very slow to call repeated times.
+		Used internally for drawing the cell onto the display regardless of any change.
+		This method should not be called outside of Cell as it is very slow to call repeatedly.
 
 		Args:
 		display		-	The surface to draw on
@@ -145,7 +146,7 @@ class Cell:
 		elif self.visited:
 			draw_rect_with_alpha(display, self.VISITED_COLOR, Vector((self.col, self.row)) * size, (size, size))
 
-		
+
 
 	def get_neighbours(self, grid):
 		"""
@@ -208,7 +209,7 @@ class Cell:
 class Vector(tuple):
 	"""
 	A basic vector that supports multiplication (only with Scalar), addition and subtraction.
-	Vector inherits from 'tuple' and therfore behaves it almost the same.
+	Vector inherits from 'tuple' and therefore it behaves almost the same.
 	"""
 	def __mul__(self, other):
 		return Vector([e * other for e in self])
@@ -267,9 +268,9 @@ class Grid:
 
 def make_maze(grid):
 	"""
-	Runs the generation algorithm on the given grid, yeilding every time a new
-	position is choosen as the current position.
-	For more information on the algorithm in use see:
+	Runs the generation algorithm on the given grid, yeilding a new
+	position every time which is set as the current position.
+	For more information on the algorithm in use, see:
 	https://en.wikipedia.org/wiki/Maze_generation_algorithm#Recursive_backtracker
 
 
@@ -281,8 +282,8 @@ def make_maze(grid):
 
 
 	Yields		-	The current position of the algorithm, i.e. the position
-					that will be evaluated next acording to the rules of the
-					algorithm
+					that will be evaluated next according to the rules of the
+					algorithm.
 	Yield type 	-	Cell
 	"""
 	current = grid[0, 0]
@@ -310,7 +311,7 @@ def make_maze(grid):
 		elif len(stack) > 0:
 			current.current = False
 			current.backtracked = True
-			
+
 			current = stack.pop(-1)
 			current.current = True
 			current.backtracked = True
@@ -320,11 +321,11 @@ def make_maze(grid):
 	while len(stack) > 0 and Cell.SHOW_BACKTRACK:
 		current.current = False
 		current.backtracked = True
-		
+
 		current = stack.pop(-1)
 		current.current = True
 		current.backtracked = True
-		
+
 		yield current
-	
+
 	current.current = False
