@@ -311,7 +311,8 @@ def main():
 	final_time = -1
 	time_flash = 60
 	hit_flash  = 0
-	hits       = 0
+	hits       = -1
+	final_hits = -1
 	while running:
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
@@ -326,11 +327,15 @@ def main():
 				hits = 0
 			if event.type == STOP_CLOCK:
 				if event.finnished:
+					final_hits = hits
 					final_time = pygame.time.get_ticks() - start_time
 					ding_sound.play()
 				else:
 					final_time = -1
-					hits = 0
+					hits = -1
+					final_hits = -1
+
+				grid.visited = set()
 				start_time = -1
 			if event.type == HIT_WALL:
 				hit_sound.play().play(hit_sound)
@@ -338,7 +343,10 @@ def main():
 				hits += 1
 
 		draw_grid(game_display, grid)
-		display_text(game_display, "HITS: %d" %(hits), RED, 40, "north", grid)
+		if hits > -1:
+			display_text(game_display, "HITS: %d" %(hits), RED, 40, "north", grid)
+		elif final_hits > -1:
+			display_text(game_display, "HITS: %d" %(final_hits), RED, 40, "north", grid)
 
 		if hit_flash % 2 and hit_flash > -1:
 			generator.draw_rect_with_alpha(game_display, (255, 0, 0, 100), (0,0), WINDOW_SIZE)
