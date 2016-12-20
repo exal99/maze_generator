@@ -1,7 +1,7 @@
 #! python
 """
 This module is used for displaying and running a maze generation algorithm.
-This moduel uses pygame to create the graphical display.
+This module uses pygame to create the graphical display.
 """
 
 import pygame
@@ -58,7 +58,7 @@ def setup():
 	parser.add_argument("-S", "--square-size", default = 20, help = "Specifies the squares' size. Default is 20.", type = int, metavar = "size")
 	parser.add_argument("-f", "--framerate", default = 60, help = "Specifies the framerate. Default is 60 fps.", type = int, metavar ="fps")
 	parser.add_argument("-u", "--update", default = 1, help = "Specifies how oft the screen should update, i.e. a value of 1 means every frame, a value of 2 means every other frame and so on. Default is 1", type=int)
-	
+
 	parser.add_argument("-b", "--background-color", default = (32, 32, 32), help = "Specifies the background color. Colors are given in RGB format. Defalut is (32, 32, 32)",
 						nargs = 3, type = int, metavar = ("r", "g", "b"))
 	parser.add_argument("-l", "--line-color", default = WHITE, help = "Specifies the color used for the lines. The color is given in RGB format. Default is %s" % (str(WHITE)),
@@ -74,7 +74,7 @@ def setup():
 	parser.add_argument("-t" , "--to-color", default = (0, 255, 0, 255), help = "Specifies the color of from positions. The color is given in RGBA form. Default is (0, 0, 255, 255)",
 						nargs = 4, type = int, metavar = ("r", "g", "b", "a"))
 
-	
+
 
 	args = parser.parse_args()
 
@@ -170,7 +170,7 @@ def keypress_handler(display, clock, event, grid):
 
 def reset(display, grid):
 	grid.reset()
-	pygame.event.post(pygame.event.Event(STOP_CLOCK, finnished=False))
+	pygame.event.post(pygame.event.Event(STOP_CLOCK, finished=False))
 	for cell in grid:
 		cell.draw(display, LINE_COLOR, SQUARE_SIZE, force_draw = True)
 
@@ -206,11 +206,11 @@ def move(grid, direction, current):
 				to_move_to = current
 
 		if to_move_to == grid.end:
-			pygame.event.post(pygame.event.Event(STOP_CLOCK, finnished=True))
+			pygame.event.post(pygame.event.Event(STOP_CLOCK, finished=True))
 			to_move_to.current = False
 			current.current = False
 			return None
-		
+
 	else:
 		pygame.event.post(pygame.event.Event(HIT_WALL))
 		if len(grid.visited) > 0:
@@ -305,7 +305,7 @@ def main():
 
 	clock      = pygame.time.Clock()
 	running    = True
-	
+
 	grid       = generator.Grid(WINDOW_SIZE[1] // SQUARE_SIZE, WINDOW_SIZE[0] // SQUARE_SIZE)
 	start_time = -1
 	final_time = -1
@@ -326,8 +326,9 @@ def main():
 				final_time = -1
 				hits = 0
 			if event.type == STOP_CLOCK:
-				if event.finnished:
+				if event.finished:
 					final_hits = hits
+				if event.finished:
 					final_time = pygame.time.get_ticks() - start_time
 					ding_sound.play()
 				else:
