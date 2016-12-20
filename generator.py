@@ -53,6 +53,7 @@ class Cell:
 		self.backtracked = False
 		self.start = False
 		self.end = False
+		self.steps = 0
 		self.last_draw = {
 			"walls": [],
 			"visited": None,
@@ -233,6 +234,7 @@ class Grid:
 		self.current = None
 		self.start = None
 		self.end = None
+		self.max_steps = self.grid[0][0]
 		self.visited = set()
 
 	def __getitem__(self, pos):
@@ -251,6 +253,13 @@ class Grid:
 			self.__init__(new_size[0], new_size[1])
 		else:
 			self.__init__(self.rows, self.cols)
+
+	def check_new_max(self, new_max):
+		if new_max.steps > self.max_steps.steps:
+			self.max_steps = new_max
+			return True
+		else:
+			return False
 
 
 
@@ -289,6 +298,9 @@ def make_maze(grid):
 			stack.append(current)
 			current.remove_wall(Vector((current.row, current.col)) - (next_cell.row, next_cell.col), next_cell)
 			current.current = False
+
+			next_cell.steps = current.steps + 1
+			grid.check_new_max(next_cell)
 
 			current = next_cell
 			current.visited = True
