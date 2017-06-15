@@ -46,7 +46,7 @@ RESET_CLOCK    = pygame.USEREVENT + 3
 HIT_WALL       = pygame.USEREVENT + 4
 LOAD_DONE 	   = pygame.USEREVENT + 5
 REMOVE_TEXT    = pygame.USEREVENT + 6
-DING_FINISHED = pygame.USEREVENT + 7
+DING_FINISHED  = pygame.USEREVENT + 7
 
 def setup():
 	"""
